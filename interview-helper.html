@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>مساعد المقابلة</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@400;700&display=swap">
+<style>
+:root{--bg:#0f1417;--panel:#182025;--fg:#eef3f5;--muted:#8fa3ad;--accent:#3fc1a5;--warn:#e0a84a;
+--ar:"Noto Kufi Arabic",Tahoma,Arial,sans-serif;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+html{height:100dvh}
+body{background:var(--bg);color:var(--fg);font-family:var(--ar);display:flex;flex-direction:column;gap:12px;
+padding:max(12px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left))}
+footer{display:flex;gap:10px}
+footer button{flex:1;padding:18px 10px;font-size:19px;border-radius:14px}
+#q{max-height:22vh;overflow:auto}
+@media (max-width:600px){#a{font-size:32px;padding:16px}}
+header{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+h1{font-size:18px;margin:0;flex:1}
+button{font-family:var(--ar);font-size:16px;border:0;border-radius:10px;padding:10px 18px;cursor:pointer;background:var(--accent);color:#06231d;font-weight:700}
+button.off{background:#33424a;color:var(--fg)}
+#status{font-size:14px;color:var(--muted)}
+#status.live{color:var(--accent)}
+#q{background:var(--panel);border-radius:10px;padding:12px 14px;font-size:15px;color:var(--muted);direction:ltr;text-align:left;min-height:48px}
+#a{flex:1;background:var(--panel);border-radius:14px;padding:22px;font-size:clamp(28px,5vw,46px);line-height:1.7;font-weight:700;overflow:auto}
+#a.wait{color:var(--warn);font-size:22px}
+#keybox{background:var(--panel);border-radius:10px;padding:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+#keybox input{flex:1;min-width:200px;padding:10px;border-radius:8px;border:1px solid #33424a;background:var(--bg);color:var(--fg);direction:ltr}
+#err{color:#ff7a7a;font-size:14px}
+</style>
+</head>
+<body>
+<header>
+  <h1>مساعد المقابلة</h1>
+  <span id="status">متوقف</span>
+</header>
+<div id="keybox" hidden>
+  <span>مفتاح Claude API:</span>
+  <input id="key" type="password" placeholder="sk-ant-...">
+  <button id="savekey">حفظ</button>
+</div>
+<div id="err"></div>
+<div id="q">سؤال المقابل يطلع هنا…</div>
+<div id="a">الجواب يطلع هنا بالحروف العربية</div>
+<footer>
+  <button id="toggle">ابدأ الاستماع</button>
+  <button id="now" class="off">جاوب الحين</button>
+</footer>
+
+<script>
+const PROFILE = `Candidate: from Abu Dhabi, UAE. Married.
+- ADNOC Distribution since 2016: currently warehouse operator; before that aircraft fuel provider (refuelling aircraft at the airport).
+- Tawazun 2013–2015: technician.
+- General secondary school certificate (2012/2013). ICDL computer certificate. Safety and first-aid courses.
+- Now applying for an administrative job.`;
+
+const SYSTEM = `You help a job candidate answer a live English job interview (Microsoft Teams).
+${PROFILE}
+You receive what the interviewer just said (speech-to-text, may have errors).
+Write the candidate's reply in simple, natural spoken English: 1-2 short sentences, max 25 words, first person, true to the profile only (never invent degrees, numbers or jobs).
+Return exactly two lines and nothing else:
+EN: <the English reply>
+AR: <the same English reply written phonetically in Arabic letters so an Arabic reader can read it aloud, e.g. "آي هاف وركد آت أدنوك ديستريبيوشن">`;
+
+const $ = id => document.getElementById(id);
+let key = ""; try{ key = localStorage.getItem("ckey") || ""; }catch(e){}
+if(!key) $("keybox").hidden = false;
+$("savekey").onclick = () => { key = $("key").value.trim(); try{localStorage.setItem("ckey",key)}catch(e){} $("keybox").hidden = !key; };
+
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec, listening = false, buffer = "", timer = null, lastEN = "", busy = false;
+
+function words(s){ return s.toLowerCase().replace(/[^a-z\s]/g,"").split(/\s+/).filter(w=>w.length>2); }
+function isMyOwnVoice(t){
+  if(!lastEN) return false;
+  const a = new Set(words(lastEN)), b = words(t);
+  if(b.length===0) return true;
+  return b.filter(w=>a.has(w)).length / b.length > 0.5;
+}
+
+function flush(){
+  clearTimeout(timer);
+  const text = buffer.trim(); buffer = "";
+  if(!text || isMyOwnVoice(text)) return;
+  ask(text);
+}
+
+async function ask(text){
+  $("q").textContent = text;
+  if(!key){ $("err").textContent = "حط مفتاح API أول."; $("keybox").hidden=false; return; }
+  busy = true; $("a").className="wait"; $("a").textContent = "لحظة…"; $("err").textContent="";
+  try{
+    const r = await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{
+      "content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01",
+      "anthropic-dangerous-direct-browser-access":"true"},
+      body:JSON.stringify({model:"claude-haiku-5-5",max_tokens:200,system:SYSTEM,
+        messages:[{role:"user",content:"Interviewer said: "+text}]})});
+    const j = await r.json();
+    if(!r.ok) throw new Error(j.error?.message || r.status);
+    const out = j.content.map(c=>c.text||"").join("");
+    lastEN = (out.match(/EN:\s*(.*)/)||[])[1] || "";
+    const ar = (out.match(/AR:\s*(.*)/)||[])[1] || out;
+    $("a").className=""; $("a").textContent = ar.trim();
+  }catch(e){ $("a").className=""; $("a").textContent=""; $("err").textContent = "خطأ: "+e.message; }
+  busy = false;
+}
+
+function start(){
+  if(!SR){ $("err").textContent = "افتح الصفحة في Safari (آيفون) أو Chrome (أندرويد)."; return; }
+  rec = new SR(); rec.lang = "en-US"; rec.continuous = true; rec.interimResults = true;
+  rec.onresult = e => {
+    let interim = "";
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      const t = e.results[i][0].transcript;
+      if(e.results[i].isFinal) buffer += " " + t; else interim += t;
+    }
+    $("q").textContent = (buffer + " " + interim).trim();
+    clearTimeout(timer); timer = setTimeout(flush, 1800);
+  };
+  rec.onerror = e => { if(e.error!=="no-speech") $("err").textContent = "المايك: "+e.error; };
+  rec.onend = () => { if(listening) try{rec.start()}catch(e){} };
+  rec.start(); listening = true;
+  try{ navigator.wakeLock && navigator.wakeLock.request("screen"); }catch(e){}
+  $("status").textContent="يسمع…"; $("status").className="live";
+  $("toggle").textContent="وقّف"; $("toggle").className="off";
+}
+function stop(){
+  listening = false; try{rec&&rec.stop()}catch(e){}
+  $("status").textContent="متوقف"; $("status").className="";
+  $("toggle").textContent="ابدأ الاستماع"; $("toggle").className="";
+}
+$("toggle").onclick = () => listening ? stop() : start();
+$("now").onclick = () => { lastEN=""; flush(); };
+</script>
+</body>
+</html>
