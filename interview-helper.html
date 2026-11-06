@@ -141,7 +141,7 @@ $("copylog").onclick = async () => {
   setTimeout(()=>$("copylog").textContent="نسخ السجل", 2000);
 };
 
-let sessionFinal = "";
+let sessionFinal = "", lastHeard = "", lastAsked = "";
 // mode "question": listening to the interviewer. mode "reading": Ali is reading the answer — the answer stays on screen
 // however long he pauses; it only changes when what is heard sounds like a new interviewer question
 // (question words such as what/how/why/tell/you, and not matching the answer he is reading).
@@ -166,12 +166,14 @@ function setMode(m){
 function flush(){
   clearTimeout(timer);
   const text = (buffer + " " + sessionFinal).trim(); buffer = ""; sessionFinal = "";
+  if(text) lastHeard = text; // kept so "جاوب الحين" can still answer it if it was skipped
   if(mode==="reading"){ if(text && isNewQuestion(text)) ask(text); return; }
   if(!text || isMyOwnVoice(text)) return;
   ask(text);
 }
 
 async function ask(text){
+  lastAsked = text;
   $("q").textContent = text;
   if(!key){ $("err").textContent = "حط مفتاح API أول."; $("keybox").hidden=false; return; }
   setMode("reading");
@@ -226,7 +228,13 @@ function stop(){
   $("toggle").textContent="ابدأ الاستماع"; $("toggle").className="";
 }
 $("toggle").onclick = () => listening ? stop() : start();
-$("now").onclick = () => { lastEN=""; mode="question"; flush(); };
+$("now").onclick = () => {
+  clearTimeout(timer);
+  const pending = (buffer + " " + sessionFinal).trim(); buffer = ""; sessionFinal = "";
+  // answer what is being heard now; if nothing, the last thing heard that was skipped
+  const text = pending || (lastHeard !== lastAsked ? lastHeard : "");
+  if(text) ask(text); else $("err").textContent = "ما سمعت سؤال جديد.";
+};
 if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
 </body>
