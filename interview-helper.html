@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>مساعد المقابلة</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f1417">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@400;700&display=swap">
 <style>
 :root{--bg:#0f1417;--panel:#182025;--fg:#eef3f5;--muted:#8fa3ad;--accent:#3fc1a5;--warn:#e0a84a;
@@ -221,6 +224,7 @@ function stop(){
 }
 $("toggle").onclick = () => listening ? stop() : start();
 $("now").onclick = () => { lastEN=""; mode="question"; flush(); };
+if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
 </body>
 </html>
