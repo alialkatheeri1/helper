@@ -165,16 +165,27 @@ function isNewQuestion(t){
   // a question word that is not part of the answer he is reading = the interviewer is talking
   return all.length >= 3 && all.some(w=>CUES.includes(w) && !ans.has(w)) && overlap(t) < 0.5;
 }
+// reading mode ends by itself after the time it takes to read the answer aloud, so no button is needed
+let readUntil = 0, readTimer = null;
 function setMode(m){
-  mode = m;
+  mode = m; clearTimeout(readTimer);
+  if(m==="reading" && readUntil > Date.now()) readTimer = setTimeout(()=>setMode("question"), readUntil - Date.now());
   if(listening) $("status").textContent = m==="reading" ? "دورك تقرا…" : "يسمع السؤال…";
 }
+function tailOf(t, n){ return t.split(/\s+/).slice(-n).join(" "); }
 function flush(){
   clearTimeout(timer);
   const text = (buffer + " " + sessionFinal).trim(); buffer = ""; sessionFinal = "";
   if(text) lastHeard = text; // kept so "جاوب الحين" can still answer it if it was skipped
-  if(mode==="reading"){ if(text && isNewQuestion(text)) ask(text); return; }
-  if(!text || isMyOwnVoice(text)) return;
+  if(!text) return;
+  if(mode==="reading" && Date.now() > readUntil) setMode("question");
+  if(mode==="reading"){
+    // his reading and the next question can arrive together, so also check the last words on their own
+    if(isNewQuestion(text)) ask(text);
+    else if(isNewQuestion(tailOf(text, 14))) ask(tailOf(text, 14));
+    return;
+  }
+  if(isMyOwnVoice(text)){ const t = tailOf(text, 14); if(!isMyOwnVoice(t) && words(t).length >= 3) ask(t); return; }
   ask(text);
 }
 
@@ -182,7 +193,7 @@ async function ask(text){
   lastAsked = text;
   $("q").textContent = text;
   if(!key){ $("err").textContent = "حط مفتاح API أول."; $("keybox").hidden=false; return; }
-  setMode("reading");
+  readUntil = Date.now() + 15000; setMode("reading");
   busy = true; $("a").className="wait"; $("a").textContent = "لحظة…"; $("err").textContent="";
   try{
     const r = await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{
@@ -197,6 +208,7 @@ async function ask(text){
     lastEN = (out.match(/EN:\s*(.*)/)||[])[1] || "";
     const ar = (out.match(/AR:\s*(.*)/)||[])[1] || out;
     $("a").className=""; $("a").textContent = ar.trim();
+    readUntil = Date.now() + 2500 + words(lastEN).length * 500; setMode("reading");
     addLog(text, lastEN, ar.trim());
   }catch(e){ $("a").className=""; $("a").textContent=""; $("err").textContent = "خطأ: "+e.message; setMode("question"); }
   busy = false;
