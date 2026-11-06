@@ -102,6 +102,9 @@ function readCookie(){ const m = document.cookie.match(/(?:^|;\s*)ckey=([^;]*)/)
 let key = ""; try{ key = localStorage.getItem("ckey") || ""; }catch(e){}
 if(!key) key = readCookie();
 if(!key) $("keybox").hidden = false;
+// ask the browser to keep this site's storage permanently (stops Android from clearing it)
+try{ navigator.storage && navigator.storage.persist && navigator.storage.persist(); }catch(e){}
+$("key").addEventListener("input", () => { if($("key").value.trim().startsWith("sk-ant-") && $("key").value.trim().length > 40) $("savekey").click(); });
 $("savekey").onclick = () => {
   key = $("key").value.trim(); if(!key) return;
   try{ localStorage.setItem("ckey",key); }catch(e){}
