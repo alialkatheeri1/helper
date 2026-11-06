@@ -94,9 +94,19 @@ EN: <the English reply>
 AR: <the same English reply written phonetically in Arabic letters so an Arabic reader can read it aloud, e.g. "آي هاف وركد آت أدنوك ديستريبيوشن". Every word must be in Arabic letters, no Latin letters at all>`;
 
 const $ = id => document.getElementById(id);
+// key is kept in two places (browser storage + a cookie for this site only), so it survives closing the page
+function readCookie(){ const m = document.cookie.match(/(?:^|;\s*)ckey=([^;]*)/); return m ? decodeURIComponent(m[1]) : ""; }
 let key = ""; try{ key = localStorage.getItem("ckey") || ""; }catch(e){}
+if(!key) key = readCookie();
 if(!key) $("keybox").hidden = false;
-$("savekey").onclick = () => { key = $("key").value.trim(); try{localStorage.setItem("ckey",key)}catch(e){} $("keybox").hidden = !key; };
+$("savekey").onclick = () => {
+  key = $("key").value.trim(); if(!key) return;
+  try{ localStorage.setItem("ckey",key); }catch(e){}
+  try{ document.cookie = "ckey="+encodeURIComponent(key)+";max-age=31536000;path=/helper/;secure;samesite=strict"; }catch(e){}
+  let saved = ""; try{ saved = localStorage.getItem("ckey") || ""; }catch(e){}
+  if(saved===key || readCookie()===key){ $("keybox").hidden = true; $("err").textContent = ""; }
+  else $("err").textContent = "المتصفح ما سمح بالحفظ. افتح الرابط من Chrome نفسه، مو من داخل واتساب أو تيليجرام.";
+};
 
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let rec, listening = false, buffer = "", timer = null, lastEN = "", busy = false;
@@ -126,9 +136,31 @@ $("copylog").onclick = async () => {
 };
 
 let sessionFinal = "";
+// mode "question": listening to the interviewer. mode "reading": Ali is reading the answer — the answer stays on screen
+// however long he pauses; it only changes when what is heard sounds like a new interviewer question
+// (question words such as what/how/why/tell/you, and not matching the answer he is reading).
+let mode = "question";
+const CUES = ["what","how","why","tell","describe","explain","could","would","can","do","does","did","when","where","which","who","you","your","yourself"];
+const COMMON = ["about","the","and","have","has","for","with","this","that","are","was","from","they","them","into","our","all"];
+function overlap(t){
+  const keep = w => !CUES.includes(w) && !COMMON.includes(w);
+  const a = new Set(words(lastEN).filter(keep)), b = words(t).filter(keep);
+  return b.length ? b.filter(w=>a.has(w)).length / b.length : 0;
+}
+function isNewQuestion(t){
+  const all = t.toLowerCase().replace(/[^a-z\s]/g,"").split(/\s+/).filter(Boolean);
+  const ans = new Set(lastEN.toLowerCase().replace(/[^a-z\s]/g,"").split(/\s+/));
+  // a question word that is not part of the answer he is reading = the interviewer is talking
+  return all.length >= 3 && all.some(w=>CUES.includes(w) && !ans.has(w)) && overlap(t) < 0.5;
+}
+function setMode(m){
+  mode = m;
+  if(listening) $("status").textContent = m==="reading" ? "دورك تقرا…" : "يسمع السؤال…";
+}
 function flush(){
   clearTimeout(timer);
   const text = (buffer + " " + sessionFinal).trim(); buffer = ""; sessionFinal = "";
+  if(mode==="reading"){ if(text && isNewQuestion(text)) ask(text); return; }
   if(!text || isMyOwnVoice(text)) return;
   ask(text);
 }
@@ -136,6 +168,7 @@ function flush(){
 async function ask(text){
   $("q").textContent = text;
   if(!key){ $("err").textContent = "حط مفتاح API أول."; $("keybox").hidden=false; return; }
+  setMode("reading");
   busy = true; $("a").className="wait"; $("a").textContent = "لحظة…"; $("err").textContent="";
   try{
     const r = await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{
@@ -151,7 +184,7 @@ async function ask(text){
     const ar = (out.match(/AR:\s*(.*)/)||[])[1] || out;
     $("a").className=""; $("a").textContent = ar.trim();
     addLog(text, lastEN, ar.trim());
-  }catch(e){ $("a").className=""; $("a").textContent=""; $("err").textContent = "خطأ: "+e.message; }
+  }catch(e){ $("a").className=""; $("a").textContent=""; $("err").textContent = "خطأ: "+e.message; setMode("question"); }
   busy = false;
 }
 
@@ -168,7 +201,7 @@ function start(){
         else sessionFinal = (sessionFinal + " " + t).trim();
       } else interim = t;
     }
-    $("q").textContent = (buffer + " " + sessionFinal + " " + interim).trim();
+    if(mode==="question") $("q").textContent = (buffer + " " + sessionFinal + " " + interim).trim();
     clearTimeout(timer); timer = setTimeout(flush, 1800);
   };
   rec.onerror = e => { if(e.error!=="no-speech") $("err").textContent = "المايك: "+e.error; };
@@ -178,7 +211,7 @@ function start(){
   };
   rec.start(); listening = true;
   try{ navigator.wakeLock && navigator.wakeLock.request("screen"); }catch(e){}
-  $("status").textContent="يسمع…"; $("status").className="live";
+  setMode("question"); $("status").className="live";
   $("toggle").textContent="وقّف"; $("toggle").className="off";
 }
 function stop(){
@@ -187,7 +220,7 @@ function stop(){
   $("toggle").textContent="ابدأ الاستماع"; $("toggle").className="";
 }
 $("toggle").onclick = () => listening ? stop() : start();
-$("now").onclick = () => { lastEN=""; flush(); };
+$("now").onclick = () => { lastEN=""; mode="question"; flush(); };
 </script>
 </body>
 </html>
