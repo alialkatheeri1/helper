@@ -29,6 +29,12 @@ button.off{background:#33424a;color:var(--fg)}
 #keybox{background:var(--panel);border-radius:10px;padding:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 #keybox input{flex:1;min-width:200px;padding:10px;border-radius:8px;border:1px solid #33424a;background:var(--bg);color:var(--fg);direction:ltr}
 #err{color:#ff7a7a;font-size:14px}
+#logbox{background:var(--panel);border-radius:10px;padding:10px 14px;max-height:40vh;overflow:auto}
+#logbox summary{cursor:pointer;color:var(--muted);font-size:15px}
+#copylog{margin:10px 0}
+.logitem{border-top:1px solid #2a363d;padding:8px 0}
+.lq{direction:ltr;text-align:left;color:var(--muted);font-size:14px}
+.la{font-size:17px;margin-top:4px}
 </style>
 </head>
 <body>
@@ -48,6 +54,11 @@ button.off{background:#33424a;color:var(--fg)}
   <button id="toggle">ابدأ الاستماع</button>
   <button id="now" class="off">جاوب الحين</button>
 </footer>
+<details id="logbox">
+  <summary>سجل المقابلة (<span id="logcount">0</span>)</summary>
+  <button id="copylog" class="off">نسخ السجل</button>
+  <div id="log"></div>
+</details>
 
 <script>
 const PROFILE = `Candidate: from Abu Dhabi, UAE. Married.
@@ -56,13 +67,31 @@ const PROFILE = `Candidate: from Abu Dhabi, UAE. Married.
 - General secondary school certificate (2012/2013). ICDL computer certificate. Safety and first-aid courses.
 - Now applying for an administrative job.`;
 
+const JOB = `Job applied for: Document Controller — Supply Operations, ADNOC Distribution.
+Duties: manage all incoming/outgoing documents; filing, classification and retention schedules; confidentiality and security of documents; scanning and electronic archiving (EDMS, SharePoint, Excel); version control (e.g. SOP Rev.0 -> Rev.1, old version withdrawn and archived); HSE and QMS documents (ERP, BCP, risk assessments, incident and audit reports, PSI package); registers for tracking; periodic reports.
+Candidate's own prepared points (use them):
+- About me: about 10 years at ADNOC Distribution in operations; worked with operational documents, daily reports, HSE and quality procedures; wants to move into Document Control because it fits his organisation skills.
+- Confidential documents: keep them in restricted folders/systems, share only with authorised people, follow company policy.
+- Electronic archiving: check the document is complete, order pages, scan at good quality, standard file naming, save in the right folder/system, update the tracking register.
+- Classification system: faster access, less time searching, audit and governance compliance.
+- Software: Excel, Word, Outlook, electronic filing; learns new systems quickly (do not claim SharePoint/EDMS experience).
+- Unauthorised request: do not share; check his access or get management approval first.
+- Accuracy before archiving: check document number, date, revision, signatures/approvals, all pages and attachments, then archive and register.
+- Filing = daily-use documents; Archiving = older, less-used documents kept for future reference.
+- Pressure: prioritise by importance and deadline, use tracking sheets and task lists.
+- HSE documents: safe work procedures, risk assessments, incident reports, emergency plans; only approved versions used.
+- Why move from operations: operations gave him a strong understanding of documents and procedures; wants an organised admin role in information management.
+- Strengths: organised, accurate, detail-oriented, confidential, follows procedures, works under pressure, long ADNOC experience.
+- Why choose him: long ADNOC Distribution experience, understands operational, HSE and quality documents, organised and trustworthy with confidential records, serious about a document-control career.`;
+
 const SYSTEM = `You help a job candidate answer a live English job interview (Microsoft Teams).
 ${PROFILE}
+${JOB}
 You receive what the interviewer just said (speech-to-text, may have errors).
-Write the candidate's reply in simple, natural spoken English: 1-2 short sentences, max 25 words, first person, true to the profile only (never invent degrees, numbers or jobs).
+Write the candidate's reply in simple, natural spoken English: 1-2 short sentences, max 30 words, first person, true to the profile only (never invent degrees, numbers or jobs).
 Return exactly two lines and nothing else:
 EN: <the English reply>
-AR: <the same English reply written phonetically in Arabic letters so an Arabic reader can read it aloud, e.g. "آي هاف وركد آت أدنوك ديستريبيوشن">`;
+AR: <the same English reply written phonetically in Arabic letters so an Arabic reader can read it aloud, e.g. "آي هاف وركد آت أدنوك ديستريبيوشن". Every word must be in Arabic letters, no Latin letters at all>`;
 
 const $ = id => document.getElementById(id);
 let key = ""; try{ key = localStorage.getItem("ckey") || ""; }catch(e){}
@@ -79,6 +108,22 @@ function isMyOwnVoice(t){
   if(b.length===0) return true;
   return b.filter(w=>a.has(w)).length / b.length > 0.5;
 }
+
+const LOG = [];
+function addLog(q, en, ar){
+  LOG.push({q, en, ar});
+  $("logcount").textContent = LOG.length;
+  const item = document.createElement("div"); item.className = "logitem";
+  const qd = document.createElement("div"); qd.className = "lq"; qd.textContent = LOG.length + ". " + q;
+  const ad = document.createElement("div"); ad.className = "la"; ad.textContent = ar;
+  item.append(qd, ad); $("log").append(item);
+}
+$("copylog").onclick = async () => {
+  const txt = LOG.map((l,i)=>`${i+1}. Q: ${l.q}\nA (EN): ${l.en}\nA (AR): ${l.ar}`).join("\n\n");
+  try{ await navigator.clipboard.writeText(txt); $("copylog").textContent = "تم النسخ ✓"; }
+  catch(e){ $("copylog").textContent = "ما انحفظ، جرّب مرة ثانية"; }
+  setTimeout(()=>$("copylog").textContent="نسخ السجل", 2000);
+};
 
 let sessionFinal = "";
 function flush(){
@@ -104,6 +149,7 @@ async function ask(text){
     lastEN = (out.match(/EN:\s*(.*)/)||[])[1] || "";
     const ar = (out.match(/AR:\s*(.*)/)||[])[1] || out;
     $("a").className=""; $("a").textContent = ar.trim();
+    addLog(text, lastEN, ar.trim());
   }catch(e){ $("a").className=""; $("a").textContent=""; $("err").textContent = "خطأ: "+e.message; }
   busy = false;
 }
