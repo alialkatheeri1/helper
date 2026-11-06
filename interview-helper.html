@@ -80,9 +80,10 @@ function isMyOwnVoice(t){
   return b.filter(w=>a.has(w)).length / b.length > 0.5;
 }
 
+let sessionFinal = "";
 function flush(){
   clearTimeout(timer);
-  const text = buffer.trim(); buffer = "";
+  const text = (buffer + " " + sessionFinal).trim(); buffer = ""; sessionFinal = "";
   if(!text || isMyOwnVoice(text)) return;
   ask(text);
 }
@@ -113,14 +114,21 @@ function start(){
   rec.onresult = e => {
     let interim = "";
     for(let i=e.resultIndex;i<e.results.length;i++){
-      const t = e.results[i][0].transcript;
-      if(e.results[i].isFinal) buffer += " " + t; else interim += t;
+      const t = e.results[i][0].transcript.trim();
+      if(e.results[i].isFinal){
+        // Android repeats earlier words in each new result; keep only the latest full version
+        if(sessionFinal && t.toLowerCase().startsWith(sessionFinal.toLowerCase())) sessionFinal = t;
+        else sessionFinal = (sessionFinal + " " + t).trim();
+      } else interim = t;
     }
-    $("q").textContent = (buffer + " " + interim).trim();
+    $("q").textContent = (buffer + " " + sessionFinal + " " + interim).trim();
     clearTimeout(timer); timer = setTimeout(flush, 1800);
   };
   rec.onerror = e => { if(e.error!=="no-speech") $("err").textContent = "المايك: "+e.error; };
-  rec.onend = () => { if(listening) try{rec.start()}catch(e){} };
+  rec.onend = () => {
+    if(sessionFinal){ buffer += " " + sessionFinal; sessionFinal = ""; }
+    if(listening) try{rec.start()}catch(e){}
+  };
   rec.start(); listening = true;
   try{ navigator.wakeLock && navigator.wakeLock.request("screen"); }catch(e){}
   $("status").textContent="يسمع…"; $("status").className="live";
