@@ -102,6 +102,102 @@ Return exactly two lines and nothing else:
 EN: <the English reply>
 AR: <the same English reply written phonetically in Arabic letters so an Arabic reader can read it aloud, e.g. "آي هاف وركد آت أدنوك ديستريبيوشن". Every word must be in Arabic letters, no Latin letters at all>`;
 
+// Ali's prepared answers (from his sheets). If the interviewer's words match one, it is shown straight away, no API needed.
+const A = [
+{q:"Tell me about yourself.",m:"عرّفنا عن نفسك",
+ en:"My name is Ali. I work at ADNOC as a Warehouse Operator. I have ten years of experience in operations. I have experience handling documents and reports.",
+ pr:"ماي نيم إز علي. آي وِرك أت أدنوك آز أ ويرهاوس أوبريتر. آي هاف تِن ييرز أوف إكسبيرينس إن أوبريشنز. آي هاف إكسبيرينس هاندلنغ دوكيومنتس أند ريبورتس.",
+ tr:"اسمي علي. أعمل في أدنوك بوظيفة مشغل مستودع. لدي عشر سنوات من الخبرة في العمليات، ولدي خبرة في التعامل مع المستندات والتقارير.",
+ kw:["yourself","tell me about","introduce","about you","who are you"]},
+{q:"What is the role of a Document Controller?",m:"ما دور مراقب الوثائق؟",
+ en:"A Document Controller receives, organizes, tracks, and archives documents. The role also includes making sure that employees use the latest approved versions.",
+ pr:"أ دوكيومنت كنترولر رِسيفز، أورغنايزز، تراكس، أند آركايفز دوكيومنتس. ذا رول أولسو إنكلودز ميكنغ شور ذات إمبلوييز يوز ذا ليتست أبروفد فيرجنز.",
+ tr:"يستلم مراقب الوثائق المستندات وينظمها ويتابعها ويؤرشفها. ويشمل الدور التأكد من أن الموظفين يستخدمون أحدث النسخ المعتمدة.",
+ kw:["role","responsibilit","duties","what does a document","what is a document controller"]},
+{q:"How do you handle incoming documents?",m:"كيف تتعامل مع المستندات الواردة؟",
+ en:"I check the document number, date, sender, department, and approvals. Then I register it and send it to the concerned department.",
+ pr:"آي تشِك ذا دوكيومنت نامبر، ديت، سِندر، ديبارتمنت، أند أبروفلز. ذِن آي ريجستر إت أند سِند إت تو ذا كنسيرند ديبارتمنت.",
+ tr:"أراجع رقم المستند وتاريخه والجهة المرسلة والقسم والاعتمادات. ثم أسجله وأحيله إلى القسم المعني.",
+ kw:["incoming","receive","received","new document","outgoing"]},
+{q:"What is Version Control?",m:"ما المقصود بالتحكم في إصدارات المستندات؟",
+ en:"I compare the old version with the new approved version. I make sure the old copy is removed from use and the latest version is shared with the concerned people.",
+ pr:"آي كومبير ذي أولد فيرجن وِذ ذا نيو أبروفد فيرجن. آي ميك شور ذي أولد كوبي إز ريموفد فروم يوس، أند ذا ليتست فيرجن إز شيرد وِذ ذا كنسيرند بيبل.",
+ tr:"أقارن النسخة القديمة بالنسخة الجديدة المعتمدة، وأتأكد من سحب النسخة القديمة من الاستخدام ومشاركة أحدث نسخة مع الأشخاص المعنيين.",
+ kw:["version","revision","latest","old copy"]},
+{q:"How do you handle confidential documents?",m:"كيف تتعامل مع المستندات السرية؟",
+ en:"I keep confidential documents secure. Only authorized people can access them. I get approval from the responsible manager before sharing them.",
+ pr:"آي كيب كونفدنشل دوكيومنتس سِكيور. أونلي أوثرايزد بيبل كان أكسِس ذِم. آي غِت أبروفل فروم ذا ريسبونسبل مانجر بيفور شيرنغ ذِم.",
+ tr:"أحفظ المستندات السرية بشكل آمن، ولا يصل إليها إلا المصرح لهم، وأحصل على موافقة المدير المسؤول قبل مشاركتها.",
+ kw:["confidential","secret","sensitive","security","secure"]},
+{q:"Why should we hire you for this position?",m:"ليش نوظفك في هذي الوظيفة؟",
+ en:"I understand ADNOC operations and the importance of accurate documents and reports. I am organized, careful, and willing to learn the document control procedures.",
+ pr:"آي أندرستاند أدنوك أوبريشنز أند ذي إمبورتنس أوف أكيورت دوكيومنتس أند ريبورتس. آي آم أورغنايزد، كيرفل، أند وِلنغ تو ليرن ذا دوكيومنت كنترول بروسيجرز.",
+ tr:"أفهم عمليات أدنوك وأهمية دقة المستندات والتقارير. أنا منظم ودقيق ولدي رغبة في تعلم إجراءات مراقبة الوثائق.",
+ kw:["hire","why should we","choose you","select you","why you"]},
+{q:"How do you archive documents electronically?",m:"كيف تؤرشف المستندات إلكترونياً؟",
+ en:"First, I check that the document is complete. Then I scan it clearly, name the file in a standard way, save it in the right folder, and update the tracking log.",
+ pr:"فيرست، آي تشِك ذات ذا دوكيومنت إز كومبليت. ذِن آي سكان إت كليرلي، نيم ذا فايل إن أ ستاندرد وي، سيف إت إن ذا رايت فولدر، أند أبديت ذا تراكنغ لوغ.",
+ tr:"أتأكد أولاً من اكتمال المستند، ثم أمسحه ضوئياً بوضوح، وأسمّي الملف بطريقة موحدة، وأحفظه في المجلد الصحيح، وأحدّث سجل التتبع.",
+ kw:["electronic","scan","digital","archive documents","how do you archive"]},
+{q:"Why is a document classification system important?",m:"ما أهمية نظام تصنيف الوثائق؟",
+ en:"It helps us find documents quickly, saves time, improves work efficiency, and supports audits.",
+ pr:"إت هِلبس أس فايند دوكيومنتس كويكلي، سيفز تايم، إمبروفز وِرك إفيشنسي، أند سبورتس أوديتس.",
+ tr:"يساعد على سرعة الوصول للمستندات، ويوفر الوقت، ويحسّن كفاءة العمل، ويدعم التدقيق.",
+ kw:["classif","categor","important"]},
+{q:"What software have you used for document management?",m:"ما البرامج التي استخدمتها؟",
+ en:"I use Microsoft Excel, Word, and Outlook. I also use electronic filing systems, and I can learn any new system quickly.",
+ pr:"آي يوز مايكروسوفت إكسل، وورد، أند آوتلوك. آي أولسو يوز إلكترونك فايلنغ سيستمز، أند آي كان ليرن إني نيو سيستم كويكلي.",
+ tr:"أستخدم إكسل وورد وأوتلوك، وأنظمة الأرشفة الإلكترونية، وأستطيع تعلم أي نظام جديد بسرعة.",
+ kw:["software","program","excel","sharepoint","tools","applications","computer"]},
+{q:"What would you do if someone asked for a document they are not authorized to access?",m:"لو أحد طلب وثيقة ما عنده صلاحية لها؟",
+ en:"I will not share it directly. First I check their access, or I get approval from the responsible department.",
+ pr:"آي ويل نوت شير إت دايركتلي. فيرست آي تشِك ذير أكسِس، أور آي غِت أبروفل فروم ذا ريسبونسبل ديبارتمنت.",
+ tr:"لن أشاركها مباشرة. أتحقق أولاً من صلاحيته أو آخذ موافقة الإدارة المختصة.",
+ kw:["authoriz","access","permission","someone ask","not allowed"]},
+{q:"How do you make sure documents are accurate before archiving them?",m:"كيف تتأكد من دقة الوثائق قبل أرشفتها؟",
+ en:"I check the document number, date, revision, signatures and approvals, and that all pages and attachments are complete. Then I archive it and register it in the system.",
+ pr:"آي تشِك ذا دوكيومنت نامبر، ديت، ريفيجن، سيغنتشرز أند أبروفلز، أند ذات أول بيجز أند أتاتشمنتس آر كومبليت. ذِن آي آركايف إت أند ريجستر إت إن ذا سيستم.",
+ tr:"أراجع رقم الوثيقة والتاريخ والإصدار والتوقيعات والاعتمادات واكتمال الصفحات والمرفقات، ثم أؤرشفها وأسجلها في النظام.",
+ kw:["accura","correct","before archiving","make sure","mistake","verify"]},
+{q:"What is the difference between filing and archiving?",m:"ما الفرق بين الحفظ والأرشفة؟",
+ en:"Filing is keeping documents for daily use. Archiving is moving old documents to the archive for future reference.",
+ pr:"فايلنغ إز كيبنغ دوكيومنتس فور ديلي يوز. آركايفنغ إز موفنغ أولد دوكيومنتس تو ذي آركايف فور فيوتشر ريفرنس.",
+ tr:"الحفظ للاستخدام اليومي. الأرشفة نقل الوثائق القديمة للأرشيف للرجوع لها مستقبلاً.",
+ kw:["difference","filing","between"]},
+{q:"How do you handle work pressure and a large number of documents?",m:"كيف تتعامل مع ضغط العمل؟",
+ en:"I set priorities by importance and deadline. I use follow-up sheets and task lists to finish on time without affecting quality.",
+ pr:"آي سِت برايوريتيز باي إمبورتنس أند ديدلاين. آي يوز فولو أب شيتس أند تاسك ليستس تو فينِش أون تايم ويذاوت أفكتنغ كواليتي.",
+ tr:"أحدد الأولويات حسب الأهمية والموعد، وأستخدم جداول المتابعة وقوائم المهام لإنجاز العمل في وقته بدون ما تتأثر الجودة.",
+ kw:["pressure","stress","workload","busy","deadline","large number"]},
+{q:"What do you know about HSE documents?",m:"ما معرفتك بوثائق الصحة والسلامة والبيئة؟",
+ en:"From my work at ADNOC Distribution, I know HSE documents like safe work procedures, risk assessments, incident reports, and emergency plans. Only the approved versions should be used.",
+ pr:"فروم ماي وِرك أت أدنوك ديستريبيوشن، آي نو إتش إس إي دوكيومنتس لايك سيف وِرك بروسيجرز، ريسك أسِسمنتس، إنسيدنت ريبورتس، أند إمرجنسي بلانز. أونلي ذي أبروفد فيرجنز شود بي يوزد.",
+ tr:"من عملي في أدنوك للتوزيع أعرف وثائق السلامة مثل إجراءات العمل الآمن وتقييم المخاطر وتقارير الحوادث وخطط الطوارئ، ولازم تُستخدم النسخ المعتمدة فقط.",
+ kw:["hse","h s e","health","safety","environment","emergency","incident"]},
+{q:"Why do you want to move from operations to a Document Controller role?",m:"ليش تبي تنتقل من العمليات لمراقبة الوثائق؟",
+ en:"My operations experience gave me a good understanding of documents, reports and procedures. Document Control is a chance to use this experience in an organized administrative role.",
+ pr:"ماي أوبريشنز إكسبيرينس غيف مي أ غود أندرستاندنغ أوف دوكيومنتس، ريبورتس أند بروسيجرز. دوكيومنت كنترول إز أ تشانس تو يوز ذِس إكسبيرينس إن أن أورغنايزد أدمنستريتف رول.",
+ tr:"خبرتي في العمليات أعطتني فهم جيد للوثائق والتقارير والإجراءات، ومراقبة الوثائق فرصة أستفيد فيها من هالخبرة في عمل إداري منظم.",
+ kw:["move from","operations","change","switch","leave","career"]},
+{q:"What are your strengths?",m:"ما نقاط قوتك؟",
+ en:"I am organized and accurate. I pay attention to details, I keep information confidential, I follow procedures, and I can work under pressure.",
+ pr:"آي آم أورغنايزد أند أكيوريت. آي بي أتِنشن تو ديتيلز، آي كيب إنفورميشن كونفدنشل، آي فولو بروسيجرز، أند آي كان وِرك أندر بريشر.",
+ tr:"أنا منظم ودقيق، أهتم بالتفاصيل، أحافظ على سرية المعلومات، ألتزم بالإجراءات، وأقدر أشتغل تحت الضغط.",
+ kw:["strength","strong point","good at","skills"]},
+{q:"Why do you want to work as a Document Controller?",m:"ليش تبي تشتغل مراقب وثائق؟",
+ en:"I want to work as a Document Controller because I enjoy organizing information and ensuring that documents are accurate, secure, and easily accessible. My experience in ADNOC Distribution has given me a strong understanding of operational procedures, HSE requirements, and document management. I believe I can add value by maintaining efficient and reliable document control processes.",
+ pr:"آي وونت تو وِرك آز أ دوكيومنت كنترولر بيكوز آي إنجوي أورغنايزنغ إنفورميشن أند إنشورنغ ذات دوكيومنتس آر أكيوريت، سِكيور، أند إيزلي أكسِسبل. ماي إكسبيرينس إن أدنوك ديستريبيوشن هاز غيفن مي أ سترونغ أندرستاندنغ أوف أوبريشنال بروسيجرز، إتش إس إي ريكوايرمنتس، أند دوكيومنت مانجمنت. آي بيليف آي كان أد فاليو باي مينتيننغ إفيشنت أند ريلايبل دوكيومنت كنترول بروسِسز.",
+ tr:"أبي أشتغل مراقب وثائق لأني أحب تنظيم المعلومات والتأكد إن الوثائق دقيقة وآمنة وسهل الوصول لها. خبرتي في أدنوك للتوزيع أعطتني فهم قوي للإجراءات التشغيلية ومتطلبات السلامة وإدارة الوثائق، وأقدر أضيف قيمة بالحفاظ على إجراءات تحكم بالوثائق فعّالة وموثوقة.",
+ kw:["why do you want","want to work","interested","apply","why this job"]}
+];
+function matchPrepared(text){
+  const t=" "+text.toLowerCase().replace(/[^a-z\s]/g," ").replace(/\s+/g," ")+" ";
+  let best=-1,bs=0,second=0;
+  A.forEach((a,i)=>{ let s=0; a.kw.forEach(k=>{ if(t.includes(k)) s+=k.includes(" ")?3:2; });
+    if(s>bs){second=bs;bs=s;best=i;} else if(s>second) second=s; });
+  return (bs>=2 && bs>second) ? best : -1;
+}
+
 const $ = id => document.getElementById(id);
 // key is kept in two places (browser storage + a cookie for this site only), so it survives closing the page
 function readCookie(){ const m = document.cookie.match(/(?:^|;\s*)ckey=([^;]*)/); return m ? decodeURIComponent(m[1]) : ""; }
@@ -192,6 +288,13 @@ function flush(){
 async function ask(text){
   lastAsked = text;
   $("q").textContent = text;
+  const m = matchPrepared(text);
+  if(m>=0){
+    lastEN = A[m].en; $("err").textContent=""; $("a").className=""; $("a").textContent = A[m].pr;
+    readUntil = Date.now() + 2500 + words(lastEN).length * 500; setMode("reading");
+    addLog(text, lastEN, A[m].pr);
+    return;
+  }
   if(!key){ $("err").textContent = "حط مفتاح API أول."; $("keybox").hidden=false; return; }
   readUntil = Date.now() + 15000; setMode("reading");
   busy = true; $("a").className="wait"; $("a").textContent = "لحظة…"; $("err").textContent="";
